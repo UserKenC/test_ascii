@@ -26,15 +26,11 @@ sys_wolfie(void)
 
   static char *art =
 static char *art =
-  "   (()__(()\n"
-  "   /       \\\n"
-  "  ( /    \\  \\\n"
-  "   \\ o o    /\n"
-  "   (_()_)__/ \\\n"
-  "  / _,==.____)\n"
-  " (   |--|      )\n"
-  " /\\_.|__|'-.__/\n"
-  " \\_)(_-)(_)/  \n";
+  "   / \\__\n"
+  "  (    @\\___\n"
+  "  /         O\n"
+  " /   (_____/\n"
+  "/_____/   U\n";";
 
 
   int len = strlen(art);   // defined in defs.h / string.c
