@@ -1,4 +1,4 @@
-// syswolfie.c  — xv6 x86 version
+// syswolfie.c  — xv6 x86 version (final fixed)
 #include "types.h"
 #include "x86.h"
 #include "defs.h"
@@ -8,9 +8,8 @@
 #include "mmu.h"
 #include "proc.h"
 #include "spinlock.h"
-#include "string.h"
 
-// we must declare the current process pointer
+// declare current process pointer (used by copyout)
 extern struct proc *proc;
 
 // syscall: int sys_wolfie(void *buf, uint size)
@@ -20,7 +19,6 @@ sys_wolfie(void)
   char *buf;
   int size;
 
-  // Get user arguments
   if(argptr(0, &buf, 0) < 0)
     return -1;
   if(argint(1, &size) < 0)
@@ -38,11 +36,10 @@ sys_wolfie(void)
     "           /    \\   /   \\\n"
     "          /      '-'     \\\n";
 
-  int len = strlen(art);
+  int len = strlen(art);   // defined in defs.h / string.c
   if(size < len)
     return -1;
 
-  // Copy art string into user buffer
   if(copyout(proc->pgdir, (uint)buf, (char *)art, len) < 0)
     return -1;
 
