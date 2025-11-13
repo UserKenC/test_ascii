@@ -1,26 +1,21 @@
-acquire(&ptable.lock);
+int
+set_priority(int pid, int new_priority)
+{
+    struct proc *p;
 
-struct proc *p;
-struct proc *highest = 0;
+    acquire(&ptable.lock);
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+        if(p->pid == pid){
+            if(new_priority < 0) new_priority = 0;
+            if(new_priority > 31) new_priority = 31;
+            p->priority = new_priority;
+            release(&ptable.lock);
 
-// Find the runnable process with the highest priority
-for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-  if(p->state == RUNNABLE){
-    if(highest == 0 || p->priority > highest->priority)
-      highest = p;
-  }
+            // preempt if necessary
+            yield();  // voluntarily give up CPU if new priority < others
+            return 0;
+        }
+    }
+    release(&ptable.lock);
+    return -1; // pid not found
 }
-
-// If a highest-priority process is found, run it
-if(highest){
-  proc = highest;
-  switchuvm(highest);
-  highest->state = RUNNING;
-
-  swtch(&cpu->scheduler, highest->context);
-  switchkvm();
-
-  proc = 0;
-}
-
-release(&ptable.lock);
