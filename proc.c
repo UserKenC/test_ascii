@@ -317,6 +317,28 @@ wait(void)
   }
 }
 
+int
+set_priority(int pid, int new_priority)
+{
+    struct proc *p;
+
+    acquire(&ptable.lock);
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+        if(p->pid == pid){
+            if(new_priority < 0) new_priority = 0;
+            if(new_priority > 31) new_priority = 31;
+            p->priority = new_priority;
+            release(&ptable.lock);
+
+            // preempt if necessary
+            yield();  // voluntarily give up CPU if new priority < others
+            return 0;
+        }
+    }
+    release(&ptable.lock);
+    return -1; // pid not found
+}
+
 //PAGEBREAK: 42
 // Per-CPU process scheduler.
 // Each CPU calls scheduler() after setting itself up.
@@ -338,24 +360,30 @@ scheduler(void)
 
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
-    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-      if(p->state != RUNNABLE)
-        continue;
+    
+	struct proc *p;
+	struct proc *highest = 0;
 
-      // Switch to chosen process.  It is the process's job
-      // to release ptable.lock and then reacquire it
-      // before jumping back to us.
-      c->proc = p;
-      switchuvm(p);
-      p->state = RUNNING;
+	// Find the runnable process with the highest priority
+	for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+	  if(p->state == RUNNABLE){
+	    if(highest == 0 || p->priority > highest->priority)
+	      highest = p;
+	  }
+	}
 
-      swtch(&(c->scheduler), p->context);
-      switchkvm();
+	// If a highest-priority process is found, run it
+	if(highest){
+	  proc = highest;
+	  switchuvm(highest);
+	  highest->state = RUNNING;
 
-      // Process is done running for now.
-      // It should have changed its p->state before coming back.
-      c->proc = 0;
-    }
+	  swtch(&cpu->scheduler, highest->context);
+	  switchkvm();
+
+	  proc = 0;
+	}
+
     release(&ptable.lock);
 
   }
