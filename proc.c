@@ -361,7 +361,6 @@ scheduler(void)
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
     
-	struct proc *p;
 	struct proc *highest = 0;
 
 	// Find the runnable process with the highest priority
@@ -374,14 +373,14 @@ scheduler(void)
 
 	// If a highest-priority process is found, run it
 	if(highest){
-	  proc = highest;
+	  c->proc = highest;
 	  switchuvm(highest);
 	  highest->state = RUNNING;
 
-	  swtch(&cpu->scheduler, highest->context);
+	  swtch(&c->scheduler, highest->context);
 	  switchkvm();
 
-	  proc = 0;
+	  c->proc = 0;
 	}
 
     release(&ptable.lock);

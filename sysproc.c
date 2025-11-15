@@ -7,6 +7,8 @@
 #include "mmu.h"
 #include "proc.h"
 
+int set_priority(int pid, int priority);
+
 int
 sys_fork(void)
 {
