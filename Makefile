@@ -81,10 +81,6 @@ CFLAGS = -fno-pic -static -fno-builtin -fno-strict-aliasing -O2 -Wall -MD -ggdb 
 CFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector)
 ASFLAGS = -m32 -gdwarf-2 -Wa,-divide
 
-%.o: %.c
-	$(CC) $(CFLAGS) -fno-pic -static -fno-builtin -fno-stack-protector \
-	-Wall -Wextra -Wno-unused-parameter -m32 -MD -ggdb -I. -c -o $@ $<
-
 # FreeBSD ld wants ``elf_i386_fbsd''
 LDFLAGS += -m $(shell $(LD) -V | grep elf_i386 2>/dev/null | head -n 1)
 
@@ -126,10 +122,11 @@ initcode: initcode.S
 	$(OBJCOPY) -S -O binary initcode.out initcode
 	$(OBJDUMP) -S initcode.o > initcode.asm
 
-_user/%: %.o ulib.o usys.o
-	$(LD) $(LDFLAGS) -m elf_i386 -N -e main -Ttext 0 -o $@ $^
-	$(OBJDUMP) -S $@ > $*.asm
-	$(OBJDUMP) -t $@ | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $*.sym
+# Rule for building user programs
+_user/%: %.c
+	$(CC) $(CFLAGS) -fno-pic -static -fno-builtin -fno-stack-protector \
+	-Wall -Wextra -Wno-unused-parameter -m32 -MD -ggdb -I. -Iuser \
+	-o $@ $<
 
 kernel: $(OBJS) entry.o entryother initcode kernel.ld
 	$(LD) $(LDFLAGS) -T kernel.ld -o kernel entry.o $(OBJS) -b binary initcode entryother
@@ -193,7 +190,7 @@ UPROGS=\
 	_wc\
 	_zombie\
 	_wolfietest\
-	_priority_test\
+	_priority_test
 
 fs.img: mkfs README $(UPROGS)
 	./mkfs fs.img README $(UPROGS)
