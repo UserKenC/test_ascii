@@ -317,26 +317,34 @@ wait(void)
   }
 }
 
+struct proc*
+get_proc_by_pid(int pid) {
+    struct proc *p;
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+        if(p->pid == pid)
+            return p;
+    }
+    return 0;
+}
+
 int
-set_priority(int pid, int new_priority)
-{
+set_priority(int pid, int priority) {
     struct proc *p;
 
-    acquire(&ptable.lock);
-    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-        if(p->pid == pid){
-            if(new_priority < 0) new_priority = 0;
-            if(new_priority > 31) new_priority = 31;
-            p->priority = new_priority;
-            release(&ptable.lock);
-
-            // preempt if necessary
-            yield();  // voluntarily give up CPU if new priority < others
-            return 0;
-        }
+    // Find the process by PID
+    p = get_proc_by_pid(pid);
+    if (p == 0) {
+        cprintf("set_priority: process with pid %d not found\n", pid);
+        return -1; // Process not found
     }
-    release(&ptable.lock);
-    return -1; // pid not found
+
+    // Update the process priority
+    p->priority = priority;
+
+    // Optionally, adjust the process state or scheduling queue if needed
+    cprintf("set_priority: process %d priority set to %d\n", pid, priority);
+
+    return 0;
 }
 
 //PAGEBREAK: 42
@@ -350,42 +358,36 @@ set_priority(int pid, int new_priority)
 void
 scheduler(void)
 {
-  struct proc *p;
-  struct cpu *c = mycpu();
-  c->proc = 0;
-  
-  for(;;){
-    // Enable interrupts on this processor.
-    sti();
+    struct proc *p;
+    struct cpu *c = mycpu();
+    c->proc = 0;
 
-    // Loop over process table looking for process to run.
-    acquire(&ptable.lock);
-    
-	struct proc *highest = 0;
+    for(;;) {
+        // Enable interrupts on this processor.
+        sti();
 
-	// Find the runnable process with the highest priority
-	for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-	  if(p->state == RUNNABLE){
-	    if(highest == 0 || p->priority > highest->priority)
-	      highest = p;
-	  }
-	}
-
-	// If a highest-priority process is found, run it
-	if(highest){
-	  c->proc = highest;
-	  switchuvm(highest);
-	  highest->state = RUNNING;
-
-	  swtch(&c->scheduler, highest->context);
-	  switchkvm();
-
-	  c->proc = 0;
-	}
-
-    release(&ptable.lock);
-
-  }
+        // Loop over process table looking for process to run.
+        acquire(&ptable.lock);
+        struct proc *selected = 0;
+        int min_priority = 9999;
+        for(p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+            if(p->state != RUNNABLE)
+                continue;
+            if(p->priority < min_priority) {
+                min_priority = p->priority;
+                selected = p;
+            }
+        }
+        if(selected) {
+            // Run process
+            selected->state = RUNNING;
+            c->proc = selected;
+            swtch(&(c->scheduler), selected->context);
+            // Process is done running
+            c->proc = 0;
+        }
+        release(&ptable.lock);
+    }
 }
 
 // Enter scheduler.  Must hold only ptable.lock
