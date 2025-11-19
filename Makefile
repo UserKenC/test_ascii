@@ -1,4 +1,4 @@
-OBJS = \
+ OBJS = \
 	bio.o\
 	console.o\
 	exec.o\
@@ -28,7 +28,6 @@ OBJS = \
 	vectors.o\
 	vm.o\
 	syswolfie.o\
-  	priority_test.o\
 
 # Cross-compiling (e.g., on Mac OS X)
 # TOOLPREFIX = i386-jos-elf
@@ -129,8 +128,7 @@ _user/%: %.c
 	-Wall -Wextra -Wno-unused-parameter -m32 -MD -ggdb -I. -Iuser \
 	-o $@ $<
 
-priority_test.o: priority_test.c
-	$(CC) $(CFLAGS) -c priority_test.c -o priority_test.o
+
 
 kernel: $(OBJS) entry.o entryother initcode kernel.ld
 	$(LD) $(LDFLAGS) -T kernel.ld -o kernel entry.o $(OBJS) -b binary initcode entryother
