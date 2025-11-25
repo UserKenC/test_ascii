@@ -37,11 +37,6 @@ enum procstate { UNUSED, EMBRYO, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 // Per-process state
 struct proc {
   uint sz;                     // Size of process memory (bytes)
-  int priority;
-  int original_priority;
-  int creation_time;
-  int run_time;
-  int wait_time;
   pde_t* pgdir;                // Page table
   char *kstack;                // Bottom of kernel stack for this process
   enum procstate state;        // Process state
@@ -54,6 +49,20 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
+
+  int priority;           // Current priority (lower number = higher priority)
+  int wait_time;          // Time spent waiting
+  int run_time;           // Time spent running
+  int turnaround_time;    // Total time from creation to termination
+  int creation_time;      // Time when process was created
+  int last_scheduled;     // Last time process was scheduled
+};
+
+// User-visible lightweight proc info returned by getprocs()
+struct uproc {
+  int pid;
+  char name[16];
+  int state;
 };
 
 // Process memory is laid out contiguously, low addresses first:
