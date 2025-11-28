@@ -28,8 +28,6 @@ OBJS = \
 	vectors.o\
 	vm.o\
 	wolfie.o\
-	setpriority.o\
-	getstats.o\
 
 
 # Cross-compiling (e.g., on Mac OS X)
@@ -150,6 +148,12 @@ vectors.S: vectors.pl
 
 ULIB = ulib.o usys.o printf.o umalloc.o
 
+setpriority.o: setpriority.c
+	$(CC) $(CFLAGS) -c setpriority.c
+
+getstats.o: getstats.c
+	$(CC) $(CFLAGS) -c getstats.c
+
 _%: %.o $(ULIB)
 	$(LD) $(LDFLAGS) -N -e main -Ttext 0 -o $@ $^
 	$(OBJDUMP) -S $@ > $*.asm
@@ -191,6 +195,7 @@ UPROGS=\
 	_ps\
 	_pwd\
 	_history\
+	_priority_test \
 	_setprioritytest\
 	_getstatstest\
 	_cpuhog\

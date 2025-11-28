@@ -584,38 +584,44 @@ int setpriority(int pid, int priority)
 }
 
 // System call to get scheduling statistics
-int getstats(int pid, struct pstat *stats)
+int getstats(int pid, struct pstat *stats_user_ptr) // Renamed for clarity
 {
-  struct proc *p;
+    struct proc *p;
+    struct pstat kstats; // 1. Create a temporary kernel-space structure
 
-  acquire(&ptable.lock);
-  for (p = ptable.proc; p < &ptable.proc[NPROC]; p++)
-  {
-    if (p->pid == pid)
+    acquire(&ptable.lock);
+    for (p = ptable.proc; p < &ptable.proc[NPROC]; p++)
     {
-      stats->pid = p->pid;
-      stats->priority = p->priority;
-      stats->wait_time = p->wait_time;
-      stats->run_time = p->run_time;
+        if (p->pid == pid)
+        {
+            // 2. Populate the safe kernel-space structure
+            kstats.pid = p->pid;
+            kstats.priority = p->priority;
+            kstats.wait_time = p->wait_time;
+            kstats.run_time = p->run_time;
 
-      // FIX: Calculate turnaround time for running processes
-      if (p->state == ZOMBIE || p->state == UNUSED)
-      {
-        // For exited processes, use the stored turnaround_time
-        stats->turnaround_time = p->turnaround_time;
-      }
-      else
-      {
-        // For running/runnable/sleeping processes, calculate current turnaround
-        stats->turnaround_time = ticks - p->creation_time;
-      }
+            if (p->state == ZOMBIE || p->state == UNUSED)
+            {
+                kstats.turnaround_time = p->turnaround_time;
+            }
+            else
+            {
+                kstats.turnaround_time = ticks - p->creation_time;
+            }
 
-      release(&ptable.lock);
-      return 0;
+            // 3. CRITICAL FIX: Use copyout to safely transfer data to user space
+            // (We are assuming the sys_getstats wrapper passed the validated user address)
+            if (copyout(myproc()->pgdir, (uint)stats_user_ptr, (char *)&kstats, sizeof(struct pstat)) < 0) {
+                release(&ptable.lock);
+                return -1; // Failed to copy to user space
+            }
+
+            release(&ptable.lock);
+            return 0;
+        }
     }
-  }
-  release(&ptable.lock);
-  return -1; // Process not found
+    release(&ptable.lock);
+    return -1; // Process not found
 }
 
 // PAGEBREAK: 36

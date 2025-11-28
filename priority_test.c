@@ -12,7 +12,7 @@ int main() {
     // First child
     pid1 = fork();
     if (pid1 == 0) {
-        set_priority(getpid(), 5);
+        setpriority(getpid(), 5);
         print_test_message(getpid(), 5);
         exit();
     }
@@ -21,7 +21,7 @@ int main() {
     if (pid1 > 0) {
         pid2 = fork();
         if (pid2 == 0) {
-            set_priority(getpid(), 10);
+            setpriority(getpid(), 10);
             print_test_message(getpid(), 10);
             exit();
         }

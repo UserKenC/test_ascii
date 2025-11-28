@@ -1,5 +1,6 @@
 #include "types.h"
 #include "x86.h"
+#include "pstat.h"
 #include "defs.h"
 #include "param.h"
 #include "memlayout.h"
@@ -11,6 +12,22 @@ extern struct {
   struct spinlock lock;
   struct proc proc[NPROC];
 } ptable;
+
+static struct proc* findproc(int pid)
+{
+    struct proc *p;
+    // ptable.lock must be held by the caller
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+        if(p->pid == pid)
+            return p;
+    }
+    return 0; // Not found
+}
+
+
+// ------------------------------------------------------------------
+// EXISTING SYSTEM CALLS (Rest of the file)
+// ------------------------------------------------------------------
 
 int
 sys_fork(void)
@@ -121,10 +138,47 @@ sys_getprocs(void)
     tmp.state = p->state;
     safestrcpy(tmp.name, p->name, sizeof(tmp.name));
     // ubuf is validated by argptr, write into it
-    ubuf[i] = tmp;
+    // NOTE: This assumes 'ubuf' is correctly handled in your 'sys_getprocs' 
+    // and that you have a definition for struct uproc. The argument handling
+    // for argptr is non-standard for xv6 systems which use copyout to write to user space.
+    // If your `argptr` is used for writing, this is fine, otherwise you need `copyout`.
+    ubuf[i] = tmp; 
     i++;
   }
   release(&ptable.lock);
 
   return i;
+}
+
+int sys_getstats(void)
+{
+    int pid;
+    char *stats_user_addr; // Use char* to hold the user pointer address
+    int len;
+
+    // Get the first argument (pid)
+    if (argint(0, &pid) < 0)
+        return -1;
+    
+    // Get the second argument (stats pointer) and its length (size of struct pstat)
+    // The kernel implementation uses argptr to validate the address
+    len = sizeof(struct pstat);
+    if (argptr(1, &stats_user_addr, len) < 0)
+        return -1;
+
+    // Call the kernel implementation function
+    return getstats(pid, (struct pstat *)stats_user_addr);
+}
+
+int sys_setpriority(void)
+{
+    int pid;
+    int new_priority;
+
+    // Get arguments from user space
+    if (argint(0, &pid) < 0 || argint(1, &new_priority) < 0)
+        return -1;
+
+    // Call the kernel implementation function (defined in proc.c)
+    return setpriority(pid, new_priority);
 }

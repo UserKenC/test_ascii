@@ -24,4 +24,3 @@
 #define SYS_getprocs 23
 #define SYS_setpriority 24
 #define SYS_getstats 25
-#define SYS_set_priority 26

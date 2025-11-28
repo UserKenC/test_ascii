@@ -122,7 +122,7 @@ void            userinit(void);
 int             wait(void);
 void            wakeup(void*);
 void            yield(void);
-int             setpriority(int, int);
+int             setpriority(int pid, int priority);
 int             getstats(int, struct pstat*);
 
 // swtch.S
